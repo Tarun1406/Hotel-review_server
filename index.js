@@ -31,7 +31,7 @@ app.use(jsonParser);
 const server = http.createServer(app);
 
 app.get('/', (req, res) => {
-    res.status(200).send('Raghav is The King');
+    res.status(200).send('Made with love by Tarun');
 });
 
 app.get('/review', getLocation, getHotel, getReview);
@@ -40,7 +40,7 @@ app.post('/review',  checkLocation, checkHotel, postReview);
 app.get('/locations', getLocations);
 app.get('/hotels', getLocation, getHotels);
 
-const port = process.env.PORT || 8080;
+const port = process.env.PORT || 3000;
 
 server.listen(port, () => {
     console.log('server running at ' + port);
