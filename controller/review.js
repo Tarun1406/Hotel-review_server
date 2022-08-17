@@ -25,20 +25,24 @@ const getHotels = async (req, res) => {
 }
 
 const arrange = (reviews) => {
-    let newReviews = {};
-    reviews.forEach((review) => {
-        const r = { username: review.username, review: review.review, rating: review.rating, location: review.location.location };
-        if (!newReviews[review.hotel.hotel]) {
-            newReviews[review.hotel.hotel] = { hotel: review.hotel.hotel, rating: review.rating, count: 1, reviews: [r]};
-        }
-        else { 
-            newReviews[review.hotel.hotel].rating = (review.rating + newReviews[review.hotel.hotel].count * newReviews[review.hotel.hotel].rating) / (newReviews[review.hotel.hotel].count + 1);
-            newReviews[review.hotel.hotel].count += 1;
-            newReviews[review.hotel.hotel].reviews.push(r);
-        }
-    })
-    return newReviews;
-}
+    try {
+        let newReviews = {};
+        reviews.forEach((review) => {
+            const r = { username: review?.username, review: review?.review, rating: review?.rating, location: review?.location?.location };
+            if (!newReviews[review?.hotel?.hotel]) {
+                newReviews[review?.hotel?.hotel] = { hotel: review?.hotel?.hotel, rating: review?.rating, count: 1, reviews: [r]};
+            }
+            else { 
+                newReviews[review.hotel.hotel].rating = (review.rating + newReviews[review.hotel.hotel].count * newReviews[review.hotel.hotel].rating) / (newReviews[review.hotel.hotel].count + 1);
+                newReviews[review.hotel.hotel].count += 1;
+                newReviews[review.hotel.hotel].reviews.push(r);
+            }
+        })
+        return newReviews;
+    } catch(err) {
+        console.log(err);
+    }
+};
 
 const sortOnRating = (reviews) => {
     reviews.sort(function (a, b) {
@@ -52,46 +56,58 @@ const sortOnRating = (reviews) => {
 }
 
 const getReview = async (req, res) => {
-    let query = {};
-    if (req.query.location)
-        query = { ...query, location: req.query.location };
-    if (req.query.hotel)
-        query = { ...query, hotel: req.query.hotel };
-    let reviews = await reviewModel.find(query).populate(['location', 'hotel']);
-    if (reviews.length === 0) { 
-        return res.status(200).json([]);
+    try {
+        let query = {};
+        if (req.query.location)
+            query = { ...query, location: req.query.location };
+        if (req.query.hotel)
+            query = { ...query, hotel: req.query.hotel };
+        let reviews = await reviewModel.find(query).populate(['location', 'hotel']);
+        if (reviews.length === 0) { 
+            return res.status(200).json([]);
+        }
+        reviews = arrange(reviews);
+        let reviewsArray = Object.values(reviews);
+        reviewsArray = sortOnRating(reviewsArray);
+        reviewsArray = reviewsArray.map(reviews => { reviews.reviews = sortOnRating(reviews.reviews); return reviews; });
+        return res.status(200).send(reviewsArray);
+    } catch(err) {
+        console.log(err);
     }
-    reviews = arrange(reviews);
-    let reviewsArray = Object.values(reviews);
-    reviewsArray = sortOnRating(reviewsArray);
-    reviewsArray = reviewsArray.map(reviews => { reviews.reviews = sortOnRating(reviews.reviews); return reviews; });
-    return res.status(200).send(reviewsArray);
 }
 
 const getLocation = async (req, res, next) => {
-    let loc = req.query.location;
-    if (loc == 'any') {
-        req.query.location = null;
-        return next();
+    try {
+        let loc = req.query.location;
+        if (loc == 'any') {
+            req.query.location = null;
+            return next();
+        }
+        loc = await locationModel.findOne({ location: loc });
+        if (!loc) {
+            return res.status(200).json([]);
+        }
+        req.query.location = loc._id;
+        next();
+    } catch(err) {
+        console.log(err);
     }
-    loc = await locationModel.findOne({ location: loc });
-    if (!loc) {
-        return res.status(200).json([]);
-    }
-    req.query.location = loc._id;
-    next();
 }
 
 const getHotel = async (req, res, next) => {
-    let hotel = req.query.hotel;
-    console.log(hotel);
-    hotel = await hotelModel.findOne({ hotel: hotel });
-    console.log(hotel);
-    if (!hotel) {
-        return res.status(200).json([]);
+    try {
+        let hotel = req.query.hotel;
+        console.log(hotel);
+        hotel = await hotelModel.findOne({ hotel: hotel });
+        console.log(hotel);
+        if (!hotel) {
+            return res.status(200).json([]);
+        }
+        req.query.hotel = hotel._id;
+        next();
+    } catch(err) {
+        console.log(err);
     }
-    req.query.hotel = hotel._id;
-    next();
 }
 
 const checkLocation = async (req, res, next) => {
